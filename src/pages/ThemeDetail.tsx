@@ -1,10 +1,114 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useThemeDataset } from '../lib/dataStore';
 import Grade from '../components/Grade';
 import Dots from '../components/Dots';
 import InstagramEmbed, { toEmbedUrl } from '../components/InstagramEmbed';
+import ThemeCard from '../components/ThemeCard';
 import { getAccent } from '../lib/accent';
-import type { DetailedRating } from '../lib/types';
+import type { DetailedRating, Theme } from '../lib/types';
+
+const RELATED_PAGE_SIZE = 6;
+const FEAR_NEIGHBORHOOD = 1;
+const ACTIVITY_NEIGHBORHOOD = 1;
+const DIFFICULTY_NEIGHBORHOOD = 1;
+
+function ratingTotal(t: Theme): number | null {
+  const v = t.rating?.total;
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+function difficultyNum(t: Theme): number | null {
+  const n = Number(t.difficulty);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function buildRelatedThemes(all: Theme[], current: Theme): Theme[] {
+  const pool = all.filter((t) => t.id !== current.id && t.operating);
+  const currentFear = current.fear;
+  const currentActivity = current.activity;
+  const currentDifficulty = difficultyNum(current);
+
+  const seen = new Set<string>();
+  const result: Theme[] = [];
+  const pushUnique = (list: Theme[]) => {
+    for (const t of list) {
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      result.push(t);
+    }
+  };
+
+  const byNameKo = (a: Theme, b: Theme) => a.name.localeCompare(b.name, 'ko');
+
+  // 1. Same cafe (branch)
+  if (current.branch) {
+    const sameCafe = pool
+      .filter((t) => t.branch === current.branch)
+      .sort((a, b) => {
+        const ra = ratingTotal(a) ?? -1;
+        const rb = ratingTotal(b) ?? -1;
+        if (rb !== ra) return rb - ra;
+        if (a.gradeRank !== b.gradeRank) return a.gradeRank - b.gradeRank;
+        return byNameKo(a, b);
+      });
+    pushUnique(sameCafe);
+  }
+
+  // 2. Similar difficulty
+  if (currentDifficulty != null) {
+    const similarDifficulty = pool
+      .map((t) => ({ t, d: difficultyNum(t) }))
+      .filter(
+        (x): x is { t: Theme; d: number } =>
+          x.d != null && Math.abs(x.d - currentDifficulty) <= DIFFICULTY_NEIGHBORHOOD,
+      )
+      .sort((a, b) => {
+        const da = Math.abs(a.d - currentDifficulty);
+        const db = Math.abs(b.d - currentDifficulty);
+        if (da !== db) return da - db;
+        return byNameKo(a.t, b.t);
+      })
+      .map((x) => x.t);
+    pushUnique(similarDifficulty);
+  }
+
+  // 3. Similar fear
+  if (currentFear != null) {
+    const similarFear = pool
+      .filter(
+        (t) =>
+          t.fear != null &&
+          Math.abs(t.fear - currentFear) <= FEAR_NEIGHBORHOOD,
+      )
+      .sort((a, b) => {
+        const da = Math.abs((a.fear ?? 0) - currentFear);
+        const db = Math.abs((b.fear ?? 0) - currentFear);
+        if (da !== db) return da - db;
+        return byNameKo(a, b);
+      });
+    pushUnique(similarFear);
+  }
+
+  // 4. Similar activity
+  if (currentActivity != null) {
+    const similarActivity = pool
+      .filter(
+        (t) =>
+          t.activity != null &&
+          Math.abs(t.activity - currentActivity) <= ACTIVITY_NEIGHBORHOOD,
+      )
+      .sort((a, b) => {
+        const da = Math.abs((a.activity ?? 0) - currentActivity);
+        const db = Math.abs((b.activity ?? 0) - currentActivity);
+        if (da !== db) return da - db;
+        return byNameKo(a, b);
+      });
+    pushUnique(similarActivity);
+  }
+
+  return result;
+}
 
 function DotsOrDash({ value, max }: { value?: number; max?: number }) {
   if (value == null) return <span style={{ color: 'var(--fg-4)' }}>—</span>;
@@ -29,6 +133,19 @@ function ratingNumber(value: number | string | undefined): number | null {
 export default function ThemeDetail() {
   const { id = '' } = useParams();
   const { status, data } = useThemeDataset();
+  const [visibleRelated, setVisibleRelated] = useState(RELATED_PAGE_SIZE);
+
+  const decoded = decodeURIComponent(id);
+  const theme = data?.themes.find((t) => t.id === decoded);
+
+  const relatedThemes = useMemo(() => {
+    if (!data || !theme) return [];
+    return buildRelatedThemes(data.themes, theme);
+  }, [data, theme]);
+
+  useEffect(() => {
+    setVisibleRelated(RELATED_PAGE_SIZE);
+  }, [theme?.id]);
 
   if (status !== 'ready') {
     return (
@@ -41,9 +158,6 @@ export default function ThemeDetail() {
       </section>
     );
   }
-
-  const decoded = decodeURIComponent(id);
-  const theme = data?.themes.find((t) => t.id === decoded);
 
   if (!theme) {
     return (
@@ -257,6 +371,44 @@ export default function ThemeDetail() {
             </aside>
           )}
         </div>
+
+        {relatedThemes.length > 0 && (
+          <section className="related">
+            <div className="related__head">
+              <h2 className="related__title">관련 테마 리뷰</h2>
+              <span className="related__caption">
+                {[
+                  '같은 카페',
+                  Number.isFinite(Number(theme.difficulty)) &&
+                    Number(theme.difficulty) > 0 &&
+                    '비슷한 난이도',
+                  theme.fear != null && '비슷한 공포도',
+                  theme.activity != null && '비슷한 활동성',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </div>
+            <div className="grid">
+              {relatedThemes.slice(0, visibleRelated).map((t) => (
+                <ThemeCard key={t.id} theme={t} />
+              ))}
+            </div>
+            {visibleRelated < relatedThemes.length && (
+              <div className="related__more">
+                <button
+                  type="button"
+                  className="related__more-btn"
+                  onClick={() =>
+                    setVisibleRelated((c) => c + RELATED_PAGE_SIZE)
+                  }
+                >
+                  더보기
+                </button>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </section>
   );
