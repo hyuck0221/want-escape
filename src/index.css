@@ -1245,6 +1245,7 @@ h4 {
 .dots {
   display: inline-flex;
   gap: 3px;
+  align-items: center;
 }
 
 .dots span {
@@ -1257,6 +1258,19 @@ h4 {
 
 .dots span[data-on='true'] {
   background: var(--fg);
+}
+
+/* Exceeds the normal max (e.g. 공포도 4/3) — all filled dots go red */
+.dots[data-over='true'] span[data-on='true'] {
+  background: var(--c-red);
+}
+
+.dots[data-over='true'] span[data-on='true']:last-of-type {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-red) 22%, transparent);
+}
+
+[data-theme='dark'] .dots[data-over='true'] span[data-on='true']:last-of-type {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c-red) 32%, transparent);
 }
 
 .rating-bars {

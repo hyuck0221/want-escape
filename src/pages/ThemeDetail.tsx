@@ -1,19 +1,14 @@
 import { Link, useParams } from 'react-router-dom';
 import { useThemeDataset } from '../lib/dataStore';
 import Grade from '../components/Grade';
+import Dots from '../components/Dots';
 import InstagramEmbed, { toEmbedUrl } from '../components/InstagramEmbed';
 import { getAccent } from '../lib/accent';
 import type { DetailedRating } from '../lib/types';
 
-function Dots({ value, max = 3 }: { value?: number; max?: number }) {
+function DotsOrDash({ value, max }: { value?: number; max?: number }) {
   if (value == null) return <span style={{ color: 'var(--fg-4)' }}>—</span>;
-  return (
-    <span className="dots" aria-label={`${value} / ${max}`}>
-      {Array.from({ length: max }).map((_, i) => (
-        <span key={i} data-on={i < value} />
-      ))}
-    </span>
-  );
+  return <Dots value={value} max={max} />;
 }
 
 const RATING_LABELS: Array<{ key: keyof DetailedRating; label: string }> = [
@@ -138,13 +133,13 @@ export default function ThemeDetail() {
                 <div className="stat">
                   <span className="stat__label">공포도</span>
                   <span className="stat__value">
-                    <Dots value={theme.fear} />
+                    <DotsOrDash value={theme.fear} />
                   </span>
                 </div>
                 <div className="stat">
                   <span className="stat__label">활동성</span>
                   <span className="stat__value">
-                    <Dots value={theme.activity} />
+                    <DotsOrDash value={theme.activity} />
                   </span>
                 </div>
               </div>

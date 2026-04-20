@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Theme } from '../lib/types';
 import Grade from './Grade';
+import Dots from './Dots';
 import { getAccent } from '../lib/accent';
 
 interface Props {
@@ -9,17 +10,6 @@ interface Props {
 }
 
 const DIFFICULTY_MAX = 11;
-
-function Dots({ value, max = 3 }: { value?: number; max?: number }) {
-  if (value == null) return null;
-  return (
-    <span className="dots" aria-label={`${value} / ${max}`}>
-      {Array.from({ length: max }).map((_, i) => (
-        <span key={i} data-on={i < value} />
-      ))}
-    </span>
-  );
-}
 
 function IdBadge({ id }: { id: string }) {
   return (
