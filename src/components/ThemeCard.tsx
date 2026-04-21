@@ -79,7 +79,7 @@ function AccentIcon({ kind }: { kind: 'yellow' | 'red' | 'blue' }) {
 }
 
 export default function ThemeCard({ theme, query }: Props) {
-  const branchLine = [theme.branch, theme.subBranch].filter(Boolean).join(' · ');
+  const headLine = [theme.branch, theme.region || '기타'].filter(Boolean).join(' · ');
   const accent = getAccent(theme);
   const played = useUserFlags('played');
   const wish = useUserFlags('wish');
@@ -107,15 +107,13 @@ export default function ThemeCard({ theme, query }: Props) {
       )}
       <div className="card__head">
         <Grade code={theme.gradeCode} />
-        <span className="card__divider" aria-hidden />
-        <span className="card__region">{theme.region || '기타'}</span>
+        <span className="card__region">
+          <Highlight text={headLine} query={query} />
+        </span>
       </div>
       <h3 className="card__name">
         <Highlight text={theme.name} query={query} />
       </h3>
-      <div className="card__branch">
-        <Highlight text={branchLine} query={query} />
-      </div>
       {theme.oneLiner && (
         <p className="card__oneliner">
           <Highlight text={theme.oneLiner} query={query} />

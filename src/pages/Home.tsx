@@ -23,6 +23,46 @@ const GRADE_ORDER = [
   'Misc',
 ] as const;
 
+const MAIN_GRADES = [
+  'S++',
+  'S+',
+  'S',
+  'A+',
+  'A',
+  'B+',
+  'B',
+  'C+',
+  'C',
+  'F',
+] as const;
+
+// Any gradeCode not in MAIN_GRADES (including 'X' and anything unknown) rolls into 'Misc'.
+function effectiveGrade(code: string): string {
+  return (MAIN_GRADES as readonly string[]).includes(code) ? code : 'Misc';
+}
+
+const DIFFICULTY_FILTER_OPTIONS = [
+  '11',
+  '10',
+  '9',
+  '8',
+  '7',
+  '6',
+  '5',
+  '4',
+  '3',
+  '2',
+  '1',
+  'Misc',
+] as const;
+
+function difficultyBucket(raw: string): string {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1 || n > 11) return 'Misc';
+  if (Number.isInteger(n)) return String(n);
+  return 'Misc';
+}
+
 const PLAY_FILTERS = ['all', 'unplayed', 'played', 'wish'] as const;
 type PlayFilter = (typeof PLAY_FILTERS)[number];
 
@@ -62,6 +102,11 @@ export default function Home() {
     () => (gradesParam ? gradesParam.split(',').filter(Boolean) : []),
     [gradesParam],
   );
+  const difficultiesParam = params.get('difficulties') ?? '';
+  const selectedDifficulties = useMemo(
+    () => (difficultiesParam ? difficultiesParam.split(',').filter(Boolean) : []),
+    [difficultiesParam],
+  );
   const includeClosed = params.get('closed') === '1';
   const play: PlayFilter = isPlayFilter(params.get('play')) ? (params.get('play') as PlayFilter) : 'all';
   const sortParam = params.get('sort');
@@ -100,7 +145,12 @@ export default function Home() {
     let list = themes.filter((t) => {
       if (!includeClosed && !t.operating) return false;
       if (selectedRegions.length > 0 && !selectedRegions.includes(t.region)) return false;
-      if (selectedGrades.length > 0 && !selectedGrades.includes(t.gradeCode)) return false;
+      if (selectedGrades.length > 0 && !selectedGrades.includes(effectiveGrade(t.gradeCode))) return false;
+      if (
+        selectedDifficulties.length > 0 &&
+        !selectedDifficulties.includes(difficultyBucket(t.difficulty))
+      )
+        return false;
       if (play === 'unplayed' && played.has(t.id)) return false;
       if (play === 'played' && !played.has(t.id)) return false;
       if (play === 'wish' && !wish.has(t.id)) return false;
@@ -144,14 +194,26 @@ export default function Home() {
         return compareGrade(a, b);
       });
     return list;
-  }, [themes, query, selectedRegions, selectedGrades, includeClosed, sort, play, played, wish]);
+  }, [
+    themes,
+    query,
+    selectedRegions,
+    selectedGrades,
+    selectedDifficulties,
+    includeClosed,
+    sort,
+    play,
+    played,
+    wish,
+  ]);
 
   const totalOperating = useMemo(() => themes.filter((t) => t.operating).length, [themes]);
 
   const hasActiveFilter =
     query.trim() !== '' ||
-    region !== 'all' ||
-    minGrade !== 'all' ||
+    selectedRegions.length > 0 ||
+    selectedGrades.length > 0 ||
+    selectedDifficulties.length > 0 ||
     includeClosed ||
     play !== 'all';
 
@@ -161,7 +223,7 @@ export default function Home() {
 
   useEffect(() => {
     setVisibleCount(INITIAL_VISIBLE);
-  }, [query, region, minGrade, includeClosed, sort, play]);
+  }, [query, regionsParam, gradesParam, difficultiesParam, includeClosed, sort, play]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -204,7 +266,7 @@ export default function Home() {
                 <span className="hero__stat-label">운영중 테마</span>
               </div>
               <div className="hero__stat">
-                <span className="hero__stat-num">{regions.length}</span>
+                <span className="hero__stat-num">{allRegions.length}</span>
                 <span className="hero__stat-label">지역</span>
               </div>
               {data?.meta.lastUpdated && (
@@ -242,25 +304,31 @@ export default function Home() {
 
             <div className="filters">
               <Dropdown
+                multiple
                 label="지역"
-                value={region}
-                options={[
-                  { value: 'all', label: '전체' },
-                  ...regions.map((r) => ({ value: r, label: r })),
-                ]}
-                onChange={(v) => updateParams({ region: v === 'all' ? null : v })}
+                value={selectedRegions}
+                options={allRegions.map((r) => ({ value: r, label: r }))}
+                onChange={(next) =>
+                  updateParams({ regions: next.length ? next.join(',') : null })
+                }
               />
               <Dropdown
-                label="최소 추천도"
-                value={minGrade}
-                options={[
-                  { value: 'all', label: '전체' },
-                  ...GRADE_ORDER.filter((g) => g !== 'Misc' && g !== 'X').map((g) => ({
-                    value: g,
-                    label: `${g} 이상`,
-                  })),
-                ]}
-                onChange={(v) => updateParams({ grade: v === 'all' ? null : v })}
+                multiple
+                label="추천도"
+                value={selectedGrades}
+                options={[...MAIN_GRADES, 'Misc'].map((g) => ({ value: g, label: g }))}
+                onChange={(next) =>
+                  updateParams({ grades: next.length ? next.join(',') : null })
+                }
+              />
+              <Dropdown
+                multiple
+                label="난이도"
+                value={selectedDifficulties}
+                options={DIFFICULTY_FILTER_OPTIONS.map((d) => ({ value: d, label: d }))}
+                onChange={(next) =>
+                  updateParams({ difficulties: next.length ? next.join(',') : null })
+                }
               />
               <Dropdown
                 label="정렬"
@@ -274,7 +342,6 @@ export default function Home() {
                 onChange={(v) => updateParams({ sort: v === 'grade' ? null : v })}
               />
               <Dropdown
-                className="dropdown--end"
                 label="보기"
                 value={play}
                 options={[
@@ -288,7 +355,7 @@ export default function Home() {
 
               <button
                 type="button"
-                className="filter-toggle"
+                className="filter-toggle filter-toggle--end"
                 aria-pressed={includeClosed}
                 onClick={() => updateParams({ closed: includeClosed ? null : '1' })}
               >
@@ -302,8 +369,9 @@ export default function Home() {
                 onClick={() =>
                   updateParams({
                     q: null,
-                    region: null,
-                    grade: null,
+                    regions: null,
+                    grades: null,
+                    difficulties: null,
                     closed: null,
                     play: null,
                     sort: null,
