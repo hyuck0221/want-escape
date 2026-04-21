@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { INSTAGRAM_URL, SHEET_URL } from '../lib/dataStore';
 import { useTheme } from '../lib/useTheme';
 
@@ -20,7 +20,32 @@ export default function Header() {
           <span>방탈출을 하고싶어요</span>
           <span className="brand__sub">· @want_escape_ archive</span>
         </Link>
+
+        <nav className="site-header__tabs" aria-label="주요 메뉴">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => `nav-tab${isActive ? ' nav-tab--active' : ''}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="m3 11 9-8 9 8" />
+              <path d="M5 10v10h14V10" />
+            </svg>
+            <span>홈</span>
+          </NavLink>
+          <NavLink
+            to="/stats"
+            className={({ isActive }) => `nav-tab${isActive ? ' nav-tab--active' : ''}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />
+            </svg>
+            <span>통계</span>
+          </NavLink>
+        </nav>
+
         <div className="site-header__spacer" />
+
         <nav className="site-header__links" aria-label="외부 링크">
           <a
             className="chip-link"

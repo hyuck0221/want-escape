@@ -6,6 +6,7 @@ import Dots from '../components/Dots';
 import InstagramEmbed, { toEmbedUrl } from '../components/InstagramEmbed';
 import ThemeCard from '../components/ThemeCard';
 import { getAccent } from '../lib/accent';
+import { toggleFlag, useUserFlags } from '../lib/userState';
 import type { DetailedRating, Theme } from '../lib/types';
 
 const RELATED_PAGE_SIZE = 6;
@@ -134,9 +135,13 @@ export default function ThemeDetail() {
   const { id = '' } = useParams();
   const { status, data } = useThemeDataset();
   const [visibleRelated, setVisibleRelated] = useState(RELATED_PAGE_SIZE);
+  const played = useUserFlags('played');
+  const wish = useUserFlags('wish');
 
   const decoded = decodeURIComponent(id);
   const theme = data?.themes.find((t) => t.id === decoded);
+  const isPlayed = theme ? played.has(theme.id) : false;
+  const isWished = theme ? wish.has(theme.id) : false;
 
   const relatedThemes = useMemo(() => {
     if (!data || !theme) return [];
@@ -219,7 +224,54 @@ export default function ThemeDetail() {
 
           <h1 className="detail__title">{theme.name}</h1>
           <div className="detail__branch">
-            {[theme.branch, theme.subBranch].filter(Boolean).join(' · ')}
+            {theme.branch ? (
+              <Link
+                to={`/cafe/${encodeURIComponent(theme.branch)}`}
+                className="detail__branch-link"
+              >
+                {theme.branch}
+              </Link>
+            ) : null}
+            {theme.subBranch && <span> · {theme.subBranch}</span>}
+          </div>
+
+          <div className="detail__actions">
+            <button
+              type="button"
+              className="detail-action"
+              data-active={isPlayed || undefined}
+              aria-pressed={isPlayed}
+              onClick={() => toggleFlag('played', theme.id)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                aria-hidden
+              >
+                <path d="m5 12 5 5 9-11" />
+              </svg>
+              해봤어요
+            </button>
+            <button
+              type="button"
+              className="detail-action detail-action--wish"
+              data-active={isWished || undefined}
+              aria-pressed={isWished}
+              onClick={() => toggleFlag('wish', theme.id)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill={isWished ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              관심있어요
+            </button>
           </div>
         </header>
 

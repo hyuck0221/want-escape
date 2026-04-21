@@ -4,6 +4,8 @@ import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import ThemeDetail from './pages/ThemeDetail';
+import Cafe from './pages/Cafe';
+import Stats from './pages/Stats';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -15,6 +17,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/theme/:id" element={<ThemeDetail />} />
+          <Route path="/cafe/:branch" element={<Cafe />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

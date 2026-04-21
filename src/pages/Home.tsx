@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ThemeCard from '../components/ThemeCard';
+import Dropdown from '../components/Dropdown';
 import { useThemeDataset } from '../lib/dataStore';
+import { useUserFlags } from '../lib/userState';
 import type { Theme } from '../lib/types';
 
 type SortKey = 'grade' | 'region' | 'difficulty' | 'difficulty-desc';
@@ -20,6 +23,12 @@ const GRADE_ORDER = [
   'Misc',
 ] as const;
 
+const PLAY_FILTERS = ['all', 'unplayed', 'played', 'wish'] as const;
+type PlayFilter = (typeof PLAY_FILTERS)[number];
+
+const INITIAL_VISIBLE = 48;
+const PAGE_SIZE = 24;
+
 function compareGrade(a: Theme, b: Theme) {
   if (a.gradeRank !== b.gradeRank) return a.gradeRank - b.gradeRank;
   return a.name.localeCompare(b.name, 'ko');
@@ -30,18 +39,56 @@ function difficultyValue(raw: string): number {
   return Number.isFinite(n) ? n : -1;
 }
 
+function isSortKey(v: string | null): v is SortKey {
+  return v === 'grade' || v === 'region' || v === 'difficulty' || v === 'difficulty-desc';
+}
+
+function isPlayFilter(v: string | null): v is PlayFilter {
+  return !!v && (PLAY_FILTERS as readonly string[]).includes(v);
+}
+
 export default function Home() {
   const { status, data, error } = useThemeDataset();
+  const [params, setParams] = useSearchParams();
 
-  const [query, setQuery] = useState('');
-  const [region, setRegion] = useState<string>('all');
-  const [minGrade, setMinGrade] = useState<string>('all');
-  const [includeClosed, setIncludeClosed] = useState(false);
-  const [sort, setSort] = useState<SortKey>('grade');
+  const query = params.get('q') ?? '';
+  const regionsParam = params.get('regions') ?? '';
+  const selectedRegions = useMemo(
+    () => (regionsParam ? regionsParam.split(',').filter(Boolean) : []),
+    [regionsParam],
+  );
+  const gradesParam = params.get('grades') ?? '';
+  const selectedGrades = useMemo(
+    () => (gradesParam ? gradesParam.split(',').filter(Boolean) : []),
+    [gradesParam],
+  );
+  const includeClosed = params.get('closed') === '1';
+  const play: PlayFilter = isPlayFilter(params.get('play')) ? (params.get('play') as PlayFilter) : 'all';
+  const sortParam = params.get('sort');
+  const sort: SortKey = isSortKey(sortParam) ? sortParam : 'grade';
+
+  const updateParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(patch)) {
+            if (v == null || v === '') next.delete(k);
+            else next.set(k, v);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
 
   const themes = data?.themes ?? [];
+  const played = useUserFlags('played');
+  const wish = useUserFlags('wish');
 
-  const regions = useMemo(() => {
+  const allRegions = useMemo(() => {
     const s = new Set<string>();
     for (const t of themes) if (t.region) s.add(t.region);
     return Array.from(s).sort((a, b) => a.localeCompare(b, 'ko'));
@@ -49,15 +96,14 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const gradeMaxRank =
-      minGrade === 'all'
-        ? 99
-        : (GRADE_ORDER.indexOf(minGrade as (typeof GRADE_ORDER)[number]) ?? 99);
 
     let list = themes.filter((t) => {
       if (!includeClosed && !t.operating) return false;
-      if (region !== 'all' && t.region !== region) return false;
-      if (gradeMaxRank < 99 && t.gradeRank > gradeMaxRank) return false;
+      if (selectedRegions.length > 0 && !selectedRegions.includes(t.region)) return false;
+      if (selectedGrades.length > 0 && !selectedGrades.includes(t.gradeCode)) return false;
+      if (play === 'unplayed' && played.has(t.id)) return false;
+      if (play === 'played' && !played.has(t.id)) return false;
+      if (play === 'wish' && !wish.has(t.id)) return false;
       if (q) {
         const hay = [
           t.name,
@@ -98,12 +144,44 @@ export default function Home() {
         return compareGrade(a, b);
       });
     return list;
-  }, [themes, query, region, minGrade, includeClosed, sort]);
+  }, [themes, query, selectedRegions, selectedGrades, includeClosed, sort, play, played, wish]);
 
   const totalOperating = useMemo(() => themes.filter((t) => t.operating).length, [themes]);
 
   const hasActiveFilter =
-    query.trim() !== '' || region !== 'all' || minGrade !== 'all' || includeClosed;
+    query.trim() !== '' ||
+    region !== 'all' ||
+    minGrade !== 'all' ||
+    includeClosed ||
+    play !== 'all';
+
+  // Infinite scroll
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE);
+  }, [query, region, minGrade, includeClosed, sort, play]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    if (visibleCount >= filtered.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
+          }
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visibleCount, filtered.length]);
+
+  const visibleThemes = filtered.slice(0, visibleCount);
 
   return (
     <>
@@ -155,7 +233,7 @@ export default function Home() {
                 inputMode="search"
                 placeholder="테마, 지점명, 지역, 한줄평 검색…"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => updateParams({ q: e.target.value })}
               />
               {status === 'ready' && (
                 <span className="search-box__count">{filtered.length.toLocaleString()}개</span>
@@ -163,64 +241,77 @@ export default function Home() {
             </label>
 
             <div className="filters">
-              <label className="filter">
-                <span className="filter__label">지역</span>
-                <select value={region} onChange={(e) => setRegion(e.target.value)}>
-                  <option value="all">전체</option>
-                  {regions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="filter">
-                <span className="filter__label">최소 추천도</span>
-                <select value={minGrade} onChange={(e) => setMinGrade(e.target.value)}>
-                  <option value="all">전체</option>
-                  {GRADE_ORDER.filter((g) => g !== 'Misc' && g !== 'X').map((g) => (
-                    <option key={g} value={g}>
-                      {g} 이상
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="filter">
-                <span className="filter__label">정렬</span>
-                <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-                  <option value="grade">추천도 높은 순</option>
-                  <option value="region">지역 순</option>
-                  <option value="difficulty">난이도 낮은 순</option>
-                  <option value="difficulty-desc">난이도 높은 순</option>
-                </select>
-              </label>
+              <Dropdown
+                label="지역"
+                value={region}
+                options={[
+                  { value: 'all', label: '전체' },
+                  ...regions.map((r) => ({ value: r, label: r })),
+                ]}
+                onChange={(v) => updateParams({ region: v === 'all' ? null : v })}
+              />
+              <Dropdown
+                label="최소 추천도"
+                value={minGrade}
+                options={[
+                  { value: 'all', label: '전체' },
+                  ...GRADE_ORDER.filter((g) => g !== 'Misc' && g !== 'X').map((g) => ({
+                    value: g,
+                    label: `${g} 이상`,
+                  })),
+                ]}
+                onChange={(v) => updateParams({ grade: v === 'all' ? null : v })}
+              />
+              <Dropdown
+                label="정렬"
+                value={sort}
+                options={[
+                  { value: 'grade', label: '추천도 높은 순' },
+                  { value: 'region', label: '지역 순' },
+                  { value: 'difficulty', label: '난이도 낮은 순' },
+                  { value: 'difficulty-desc', label: '난이도 높은 순' },
+                ]}
+                onChange={(v) => updateParams({ sort: v === 'grade' ? null : v })}
+              />
+              <Dropdown
+                className="dropdown--end"
+                label="보기"
+                value={play}
+                options={[
+                  { value: 'all', label: '전체' },
+                  { value: 'unplayed', label: '안 해본 것만' },
+                  { value: 'played', label: '해봤어요', hint: played.size },
+                  { value: 'wish', label: '관심있어요', hint: wish.size },
+                ]}
+                onChange={(v) => updateParams({ play: v === 'all' ? null : v })}
+              />
 
               <button
                 type="button"
                 className="filter-toggle"
                 aria-pressed={includeClosed}
-                onClick={() => setIncludeClosed((v) => !v)}
-                title="폐업 / 기간한정 등 현재 플레이 불가 테마 포함"
+                onClick={() => updateParams({ closed: includeClosed ? null : '1' })}
               >
                 폐업 포함
               </button>
 
-              {hasActiveFilter && (
-                <button
-                  type="button"
-                  className="filter-clear"
-                  onClick={() => {
-                    setQuery('');
-                    setRegion('all');
-                    setMinGrade('all');
-                    setIncludeClosed(false);
-                  }}
-                >
-                  초기화
-                </button>
-              )}
+              <button
+                type="button"
+                className="filter-clear"
+                disabled={!hasActiveFilter}
+                onClick={() =>
+                  updateParams({
+                    q: null,
+                    region: null,
+                    grade: null,
+                    closed: null,
+                    play: null,
+                    sort: null,
+                  })
+                }
+              >
+                초기화
+              </button>
             </div>
           </div>
         </div>
@@ -269,17 +360,24 @@ export default function Home() {
                   <p>다른 키워드로 시도해보거나 필터를 초기화해주세요.</p>
                 </div>
               ) : (
-                <div className="grid">
-                  {filtered.map((t) => (
-                    <ThemeCard key={t.id} theme={t} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid">
+                    {visibleThemes.map((t) => (
+                      <ThemeCard key={t.id} theme={t} query={query} />
+                    ))}
+                  </div>
+                  {visibleCount < filtered.length && (
+                    <div className="infinite-sentinel" ref={sentinelRef} aria-hidden>
+                      <span className="infinite-sentinel__spinner" />
+                      더 불러오는 중…
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
         </div>
       </section>
-
     </>
   );
 }
