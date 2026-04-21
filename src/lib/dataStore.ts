@@ -12,9 +12,31 @@ export const INSTAGRAM_URL = 'https://www.instagram.com/want_escape_/';
 const FETCH_URL = SHEET_EXPORT_URL;
 
 const CACHE_KEY = 'we-dataset-v1';
+const CACHE_ENABLED_KEY = 'we-cache-enabled';
 const CACHE_VERSION = 1;
 const FRESH_MS = 60 * 60 * 1000; // 1 h  — within this: cache only, no network
 const EXPIRE_MS = 30 * 24 * 60 * 60 * 1000; // 30 d — beyond this: discard
+
+export function isCacheEnabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    return localStorage.getItem(CACHE_ENABLED_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export function setCacheEnabled(enabled: boolean): void {
+  try {
+    if (enabled) localStorage.removeItem(CACHE_ENABLED_KEY);
+    else {
+      localStorage.setItem(CACHE_ENABLED_KEY, 'false');
+      localStorage.removeItem(CACHE_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
 
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -38,6 +60,7 @@ interface CacheEntry {
 
 // ---------- Persistence ----------
 function readCache(): CacheEntry | null {
+  if (!isCacheEnabled()) return null;
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -51,6 +74,7 @@ function readCache(): CacheEntry | null {
 }
 
 function writeCache(entry: CacheEntry): void {
+  if (!isCacheEnabled()) return;
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch {

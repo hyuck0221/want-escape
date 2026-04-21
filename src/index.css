@@ -2103,9 +2103,14 @@ mark.hl {
   height: 16px;
 }
 
-.detail-action:hover {
+.detail-action:hover:not(:disabled) {
   border-color: var(--line-strong);
   background: var(--surface-hover);
+}
+
+.detail-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .detail-action[data-active] {
@@ -2373,5 +2378,489 @@ mark.hl {
   }
   .nav-tab span {
     display: none;
+  }
+}
+
+.icon-btn--active {
+  background: var(--bg-3);
+  color: var(--fg);
+  border-color: var(--line-strong);
+}
+
+[data-theme='dark'] .icon-btn--active {
+  background: var(--surface-2);
+}
+
+/* ============================================================
+   Settings page
+   ============================================================ */
+.settings {
+  padding: 32px 0 96px;
+}
+
+.settings-section {
+  margin-top: 24px;
+  padding: 22px 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+
+.settings-section__title {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line-2);
+}
+
+.settings-row:first-of-type {
+  border-top: 0;
+  padding-top: 8px;
+}
+
+.settings-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-row__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.settings-row__hint {
+  font-size: 12.5px;
+  color: var(--fg-3);
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+
+.settings-empty {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  color: var(--fg-3);
+  font-size: 13px;
+}
+
+/* ----- Toggle switch ----- */
+.toggle-switch {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.toggle-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.toggle-switch[data-on] {
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
+.toggle-switch[data-on] .toggle-switch__thumb {
+  transform: translateX(18px);
+  background: var(--bg);
+}
+
+/* ----- Share block ----- */
+.share-block {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-2);
+  margin-bottom: 6px;
+  letter-spacing: -0.005em;
+}
+
+.share-field__row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.share-code {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--fg);
+  word-break: break-all;
+  line-height: 1.5;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.share-code--url {
+  font-size: 12px;
+  color: var(--fg-1);
+}
+
+.share-action {
+  flex: none;
+  padding: 0 14px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.share-action:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.share-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.share-action--ghost {
+  background: var(--surface);
+  color: var(--fg-1);
+  border-color: var(--line-strong);
+}
+
+.share-action--ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+/* ----- QR ----- */
+.qr-wrap {
+  margin-top: 4px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.qr-wrap__img {
+  width: 240px;
+  height: 240px;
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: 8px;
+}
+
+.qr-wrap__placeholder {
+  width: 240px;
+  height: 240px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-3);
+  background: var(--surface);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+}
+
+.qr-wrap__caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-3);
+  text-align: center;
+}
+
+/* ----- Danger zone ----- */
+.danger-zone {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--danger) 4%, var(--surface));
+}
+
+[data-theme='dark'] .danger-zone {
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+.danger-zone__title {
+  color: var(--danger);
+}
+
+.danger-btn {
+  flex: none;
+  padding: 0 16px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--danger) 48%, var(--line));
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.danger-btn:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
+.danger-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Invite page
+   ============================================================ */
+.invite-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.invite-list__row {
+  display: grid;
+  grid-template-columns: 56px auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.invite-list__id {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-3);
+}
+
+.invite-list__grade {
+  display: inline-flex;
+}
+
+.invite-list__name {
+  font-weight: 600;
+  color: var(--fg);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-list__name--unknown {
+  color: var(--fg-3);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.invite-list__row--unknown {
+  grid-template-columns: 56px 1fr auto;
+}
+
+.invite-list__meta {
+  color: var(--fg-3);
+  font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .invite-list__row {
+    grid-template-columns: 48px auto 1fr auto;
+    row-gap: 4px;
+  }
+  .invite-list__meta {
+    grid-column: 2 / -1;
+    font-size: 11.5px;
+  }
+}
+
+.invite-chip {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.invite-chip--played {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.invite-chip--wish {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.invite-chip--both {
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  color: var(--brand);
+  border: 1px solid color-mix(in srgb, var(--brand) 34%, transparent);
+}
+
+.invite-cta {
+  margin-top: 24px;
+}
+
+.invite-actions {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.invite-confirm {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+.invite-confirm:hover {
+  background: var(--fg-1);
+  color: var(--bg);
+  border-color: var(--fg-1);
+}
+
+.invite-warning {
+  margin-top: 24px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--warning) 38%, var(--line));
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+  border-radius: var(--r-lg);
+}
+
+[data-theme='dark'] .invite-warning {
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+}
+
+.invite-warning__title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--fg);
+  margin-bottom: 6px;
+}
+
+.invite-warning__body {
+  margin: 0 0 12px;
+  color: var(--fg-1);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.invite-warning__list {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--fg-1);
+}
+
+.invite-warning__list strong {
+  color: var(--fg);
+}
+
+/* ----- Auto-home countdown button -----
+   Ring is painted on the border-box via conic-gradient, while the solid
+   button surface fills the padding-box. `@property` lets the angular stop
+   animate smoothly. */
+@property --invite-home-progress {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: false;
+}
+
+.invite-auto-home {
+  position: relative;
+  isolation: isolate;
+  border: 2px solid transparent;
+  --invite-home-progress: 0%;
+  --invite-home-track: color-mix(in srgb, var(--bg) 22%, transparent);
+  --invite-home-fill: var(--bg);
+  background:
+    linear-gradient(var(--fg), var(--fg)) padding-box,
+    conic-gradient(
+      from -90deg,
+      var(--invite-home-fill) var(--invite-home-progress),
+      var(--invite-home-track) 0
+    ) border-box;
+  animation: inviteAutoHomeFill 5s linear forwards;
+}
+
+.invite-auto-home:hover {
+  /* keep ring visible on hover — override generic detail-action hover */
+  background:
+    linear-gradient(var(--fg-1), var(--fg-1)) padding-box,
+    conic-gradient(
+      from -90deg,
+      var(--invite-home-fill) var(--invite-home-progress),
+      var(--invite-home-track) 0
+    ) border-box;
+}
+
+.invite-auto-home__label {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes inviteAutoHomeFill {
+  from { --invite-home-progress: 0%; }
+  to { --invite-home-progress: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-auto-home {
+    animation: none;
+    --invite-home-progress: 100%;
   }
 }
